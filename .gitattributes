@@ -1,2 +1,2 @@
 secrets/ooiopendata/** filter=git-crypt-ooiopendata diff=git-crypt-ooiopendata
-secrets/camhd/** filter=git-crypt-camhd diff=git-crypt-camhd
+secrets/ooiopendata-camhd/** filter=git-crypt-camhd diff=git-crypt-camhd
