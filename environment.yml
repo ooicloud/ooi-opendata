@@ -1,0 +1,24 @@
+name: ooi-opendata
+channels:
+  - pyviz/label/dev
+  - conda-forge
+  - defaults
+dependencies:
+  - bokeh
+  - hvplot
+  - ipykernel
+  - ipython
+  - ipywidgets
+  - jupyter
+  - jupyterlab
+  - matplotlib
+  - nodejs
+  - pandas
+  - pip
+  - python=3.7
+  - pyviz
+  - widgetsnbextension
+  - numpy
+  - pip:
+    - azure-storage-blob
+    - ruamel.yaml
