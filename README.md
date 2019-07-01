@@ -13,6 +13,8 @@ In order to obtain write access to containers in the ooiopendata storage account
 
 ### Repo configuration
 
-* Request a git-crypt symmetric key from the maintainers of this repo for the container(s) you are using
-* Initialize git-crypt using the unlock command.
+* Request a git-crypt symmetric key from the maintainers of this repo for the container(s) you are using.
+* Initialize git-crypt using the unlock command:
   * `git-crypt unlock /path/to/your.key`
+* Install the local library using:
+  * `pip install -e .`
