@@ -35,7 +35,6 @@ def write_pickle(containers, account_key, expiration, filename, overwrite=False,
         if include_account_key == True:
             keys['ooiopendata'] = account_key
         pickle_path = os.path.abspath(filename)
-        print(pickle_path)
         if os.path.isfile(pickle_path) == False:
             with open(pickle_path, 'wb') as f:
                 pickle.dump(keys, f, protocol=0)
