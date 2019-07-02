@@ -2,6 +2,7 @@ import glob, os
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob.models import ContainerPermissions
 import datetime
+import pickle
 
 def get_keys(secrets_path):
     secrets_path = os.path.abspath(secrets_path)
@@ -30,3 +31,24 @@ def gen_token(container, account_key, expiration):
         ContainerPermissions.LIST,
         datetime.datetime.utcnow() + expiration)
     return container_sas
+
+def write_pickle(containers, account_key, expiration, filename, overwrite=False, include_account_key=False):
+    if type(containers) == list:
+        keys = dict()
+        for container in containers:
+            container_sas = gen_token(container, account_key, expiration)
+            keys[container] = container_sas
+        if include_account_key == True:
+            keys['ooiopendata'] = account_key
+        pickle_path = os.path.abspath(filename)
+        print(pickle_path)
+        if os.path.isfile(pickle_path) == False:
+            with open(pickle_path, 'wb') as f:
+                pickle.dump(keys, f, protocol=0)
+        elif overwrite == True:
+            with open(pickle_path, 'wb') as f:
+                pickle.dump(keys, f, protocol=0)
+        else:
+            raise Exception('File exists.')
+    else:
+        raise TypeError('The \'containers\' argument must be a list.')
