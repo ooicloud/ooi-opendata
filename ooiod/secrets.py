@@ -9,6 +9,9 @@ def load_keys(secrets_file):
     if os.path.isfile(secrets_file):
         with open(secrets_file, 'rb') as f:
             keys = pickle.load(f)
+        print('You have:')
+        for key in keys:
+            print('    ' + key)
         return keys
     else:
         raise NameError('Secrets file not found.')
