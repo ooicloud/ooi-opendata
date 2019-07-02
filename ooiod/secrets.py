@@ -1,26 +1,17 @@
-import glob, os
+import os
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob.models import ContainerPermissions
 import datetime
 import pickle
 
-def get_keys(secrets_path):
-    secrets_path = os.path.abspath(secrets_path)
-    if os.path.isdir(secrets_path):
-        keys = dict()
-        for filename in glob.iglob(secrets_path + '/**', recursive=True):
-            if os.path.isfile(filename):
-                with open(filename, 'rb') as b:
-                    b.seek(1)
-                    if b.read(8) != b'GITCRYPT':
-                        b.seek(0,0)
-                        keys[filename.split('/')[-1]] = b.readline().strip().decode()
-        if len(keys) > 0:
-            return keys
-        else:
-            raise Exception('No keys found.')
+def load_keys(secrets_file):
+    secrets_file = os.path.abspath(secrets_file)
+    if os.path.isfile(secrets_file):
+        with open(secrets_file, 'rb') as f:
+            keys = pickle.load(f)
+        return keys
     else:
-        raise NameError('Secrets directory not found.')
+        raise NameError('Secrets file not found.')
 
 def gen_token(container, account_key, expiration):
     ooiopendata_service = BlockBlobService('ooiopendata', account_key)
