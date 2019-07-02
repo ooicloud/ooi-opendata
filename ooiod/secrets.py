@@ -1,4 +1,7 @@
 import glob, os
+from azure.storage.blob import BlockBlobService
+from azure.storage.blob.models import ContainerPermissions
+import datetime
 
 def get_keys(secrets_path):
     secrets_path = os.path.abspath(secrets_path)
@@ -17,3 +20,13 @@ def get_keys(secrets_path):
             raise Exception('No keys found.')
     else:
         raise NameError('Secrets directory not found.')
+
+def gen_token(container, account_key, expiration):
+    ooiopendata_service = BlockBlobService('ooiopendata', account_key)
+    container_sas = ooiopendata_service.generate_container_shared_access_signature(container,
+        ContainerPermissions.READ +
+        ContainerPermissions.WRITE +
+        ContainerPermissions.DELETE +
+        ContainerPermissions.LIST,
+        datetime.datetime.utcnow() + expiration)
+    return container_sas
