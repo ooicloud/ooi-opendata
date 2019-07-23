@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# This script copies CamHD video and log files from the local filesystem to
+# OOI OpenData Blob store on Azure using rclone. The directory structure is
+# flattened at the destination. To use, pass the name of a local directory
+# containing CamHD data as the argument to this script.
+
+# check number of arguments
+if [ "$#" -ne 1 ]; then
+    echo "Enter one directory as an argument."
+    exit
+fi
+
+# check if directory exists
+if [ ! -d $1 ]; then
+    echo "Pass the name of a valid directory."
+    exit
+fi
+
+# check that rclone is installed
+command -v rclone > /dev/null
+if [ $? -ne 0 ]; then
+    echo "Install the rclone utility. https://rclone.org."
+    exit
+fi
+
+# create rclone remote if necessary
+SASURL="" # replace with valid SAS URL
+REMOTENAME="ooiopendata_camhd"
+if [ -z "${SASURL}" ]; then
+    echo "Replace the empty SASURL variable with a valid SAS URL."
+    exit
+fi
+if [[ ! `rclone listremotes` =~ ${REMOTENAME} ]]; then
+    echo "Creating remote."
+    rclone config create ${REMOTENAME} azureblob sas_url ${SASURL}
+else
+    echo "Remote exists."
+fi
+
+# test copy to Azure
+TMPFILE=$(mktemp /tmp/rclone_ooiopendata.XXXXXX)
+echo "test data" > ${TMPFILE}
+echo "Testing copy ${TMPFILE} to Azure."
+rclone copy ${TMPFILE} "${REMOTENAME}:/"
+if [ $? -ne 0 ]; then
+    echo "Test copy to Azure failed. Check SAS URL."
+    rm ${TMPFILE}
+    exit
+else
+    echo "Test copy to Azure successful."
+    rm ${TMPFILE}
+fi 
+
+# copy MOV files
+echo "Copying MOV files ..."
+find $1 -type f -name "*.mov" -print0 | \
+    xargs -0 --verbose -I {} rclone copy {} "${REMOTENAME}:"
+
+# copy LOG files
+echo "Copying LOG files ..."
+find $1 -type f -name "*.log" -print0 | \
+    xargs -0 --verbose -I {} rclone copy {} "${REMOTENAME}:/"
