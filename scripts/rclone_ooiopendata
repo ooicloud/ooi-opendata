@@ -59,4 +59,4 @@ find $1 -type f -name "*.mov" -print0 | \
 # copy LOG files
 echo "Copying LOG files ..."
 find $1 -type f -name "*.log" -print0 | \
-    xargs -0 --verbose -I {} rclone copy {} "${REMOTENAME}:/"
+    xargs -0 --verbose -I {} rclone copy {} "${REMOTENAME}:"
