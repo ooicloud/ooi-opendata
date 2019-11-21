@@ -8,5 +8,8 @@ Available subpackages
 ---------------------
 secrets
     Functions for working with the secrets files and authentication.
+blobs
+    Functions for working with blobs in ooiopendata.
 """
 from . import secrets
+from . import blobs
