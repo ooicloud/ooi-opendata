@@ -15,9 +15,9 @@ def _list_blob_set(storage_account, container, nextmarker = None):
 
 def list_blobs(storage_account, container):
     blobs = []
-    blob_set, nextmarker = _list_blob_set('ooiopendata', 'botpt')
+    blob_set, nextmarker = _list_blob_set('ooiopendata', container)
     blobs = blobs + blob_set
     while nextmarker:
-        blob_set, nextmarker = _list_blob_set('ooiopendata', 'botpt', nextmarker)
+        blob_set, nextmarker = _list_blob_set('ooiopendata', container, nextmarker)
         blobs = blobs + blob_set
     return blobs
