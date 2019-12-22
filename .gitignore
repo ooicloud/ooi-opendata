@@ -106,5 +106,7 @@ venv.bak/
 # secrets
 secrets/
 
+# data
+*.nc
 # Mac stuff
 .DS_Store
