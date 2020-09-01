@@ -1,6 +1,6 @@
 import os
-from azure.storage.blob import BlockBlobService
-from azure.storage.blob.models import ContainerPermissions
+# from azure.storage.blob import BlockBlobService
+# from azure.storage.blob.models import ContainerPermissions
 import datetime
 import pickle
 
@@ -16,15 +16,15 @@ def load_keys(secrets_file):
     else:
         raise NameError('Secrets file not found.')
 
-def gen_token(container, account_key, expiration):
-    ooiopendata_service = BlockBlobService('ooiopendata', account_key)
-    container_sas = ooiopendata_service.generate_container_shared_access_signature(container,
-        ContainerPermissions.READ +
-        ContainerPermissions.WRITE +
-        ContainerPermissions.DELETE +
-        ContainerPermissions.LIST,
-        datetime.datetime.utcnow() + expiration)
-    return container_sas
+#def gen_token(container, account_key, expiration):
+#    ooiopendata_service = BlockBlobService('ooiopendata', account_key)
+#    container_sas = ooiopendata_service.generate_container_shared_access_signature(container,
+#        ContainerPermissions.READ +
+#        ContainerPermissions.WRITE +
+#        ContainerPermissions.DELETE +
+#        ContainerPermissions.LIST,
+#        datetime.datetime.utcnow() + expiration)
+#    return container_sas
 
 def write_pickle(containers, account_key, expiration, filename, overwrite=False, include_account_key=False):
     if type(containers) == list:
