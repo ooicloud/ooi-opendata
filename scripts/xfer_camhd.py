@@ -7,31 +7,34 @@ from bs4 import BeautifulSoup
 from azure.storage.blob import BlobServiceClient
 import yaml
 import subprocess
+from datetime import datetime
+from datetime import timedelta
 
+# Constants
+repodir = '/home/tjc/github/ooicloud/ooi-opendata/'
 
 # Get list of files on raw data server
-def get_raw_list(year):
-    url_base_year = 'https://rawdata.oceanobservatories.org/files/RS03ASHS/PN03B/06-CAMHDA301/' + str(year)
+def get_raw_list():
+    dates = []
+    for i in range(4): # scrape index files from three days ago to present
+       dates.append(datetime.now() - timedelta(days=i))
+
     ext = 'mov'
     filelist = []
-    for month in list(np.arange(1,13)):
-        url_base_month = '%s/%02.0f' % (url_base_year, month)
-        response = requests.get(url_base_month)
+
+    for date in dates:
+        url = 'https://rawdata.oceanobservatories.org/files/RS03ASHS/PN03B/06-CAMHDA301/%i/%02.0f/%02.0f/' % (date.year, date.month, date.day)
+        response = requests.get(url)
         if response.ok:
-            for day in list(np.arange(1,31)):
-                url_base_day = '%s/%02.0f/' % (url_base_month, day)
-                response = requests.get(url_base_day)
-                if response.ok:
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    filelist = filelist + [url_base_day + 
-                              node.get('href') for node in soup.find_all('a') if node.get('href').endswith(ext)]
+            soup = BeautifulSoup(response.text, 'html.parser')
+            filelist = filelist + [url + node.get('href') for node in soup.find_all('a') if node.get('href').endswith(ext)]
+
     return filelist
 
-raw_list = get_raw_list(2020)
-
+raw_list = get_raw_list()
 
 # Get list of files on Azure
-with open('../secrets/tjcrone.yml', 'r') as stream:
+with open(repodir + 'secrets/tjcrone.yml', 'r') as stream:
     keys = yaml.safe_load(stream)
 storage_account_url = 'https://ooiopendata.blob.core.windows.net'
 blob_service_client = BlobServiceClient(storage_account_url, credential = keys['camhd'])
