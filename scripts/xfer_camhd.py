@@ -277,14 +277,14 @@ def save_dbcamhd(dbcamhd, sas_token=None):
     blob_service_client = BlobServiceClient(storage_account_url, credential=sas_token)
 
     dbcamhd.to_json('dbcamhd.json', orient="records", lines=True)
-    #blob_client = blob_service_client.get_blob_client(container='camhd', blob='dbcamhd.json')
-    #with open('dbcamhd.json', 'rb') as data:
-    #    blob_client.upload_blob(data, overwrite=True)
+    blob_client = blob_service_client.get_blob_client(container='camhd', blob='dbcamhd.json')
+    with open('dbcamhd.json', 'rb') as data:
+        blob_client.upload_blob(data, overwrite=True)
 
     dbcamhd.to_csv('dbcamhd.csv')
-    #blob_client = blob_service_client.get_blob_client(container='camhd', blob='dbcamhd.csv')
-    #with open('dbcamhd.csv', 'rb') as data:
-    #    blob_client.upload_blob(data, overwrite=True)
+    blob_client = blob_service_client.get_blob_client(container='camhd', blob='dbcamhd.csv')
+    with open('dbcamhd.csv', 'rb') as data:
+        blob_client.upload_blob(data, overwrite=True)
 
 
 def main():
