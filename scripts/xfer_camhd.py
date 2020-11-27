@@ -79,7 +79,7 @@ def get_ooiopendata_blobs(container=None, sas_token=None):
     list : Azure BlobProperties class.
     """
     storage_account_url = 'https://ooiopendata.blob.core.windows.net'
-    blob_service_client = BlobServiceClient(storage_account_url, credential = sas_token)
+    blob_service_client = BlobServiceClient(storage_account_url, credential=sas_token)
     container_client = blob_service_client.get_container_client(container)
     ooiopendata_blobs = [blob for blob in container_client.list_blobs()]
     return ooiopendata_blobs
@@ -100,11 +100,13 @@ def get_transfer_list(raw_list, ooiopendata_list):
     -------
     list : str
     """
+    storage_account_url = 'https://ooiopendata.blob.core.windows.net'
+    blob_service_client = BlobServiceClient(storage_account_url)
     transfer_list = []
     for url in raw_list:
         filename = url.split('/')[-1].strip()
         if filename in ooiopendata_list:
-            blob_client = blob_service_client.get_blob_client(container = 'camhd', blob = filename)
+            blob_client = blob_service_client.get_blob_client(container='camhd', blob=filename)
             md5_hash = blob_client.get_blob_properties()['content_settings']['content_md5']
             if not md5_hash:
                 transfer_list.append(url)
@@ -149,7 +151,7 @@ def transfer_files(transfer_list, sas_token, max_file_size=None):
 #for file_url in files_to_transfer:
 #    filename = file_url.split('/')[-1].strip()
 #    print('Deleting %s' % filename)
-#    blob_client = blob_service_client.get_blob_client(container = 'camhd', blob = filename)
+#    blob_client = blob_service_client.get_blob_client(container='camhd', blob=filename)
 #    blob_client.delete_blob()
 
 
@@ -159,7 +161,7 @@ def read_dbcamhd():
     """
     dbcamhd_url = 'https://ooiopendata.blob.core.windows.net/camhd/dbcamhd.json'
     with fsspec.open(dbcamhd_url) as f:
-        dbcamhd = pd.read_json(f, orient="records", lines=True, convert_dates = False, dtype=False)
+        dbcamhd = pd.read_json(f, orient="records", lines=True, convert_dates=False, dtype=False)
     return dbcamhd
 
 
@@ -229,7 +231,7 @@ def get_dbcamhd_entry(blob):
         frame_count = 0
 
     return pd.DataFrame([[name, url, filesize, md5, moov, timestamp, deployment, frame_count]],
-                        columns = ['name', 'url', 'filesize', 'md5', 'moov', 'timestamp',
+                        columns=['name', 'url', 'filesize', 'md5', 'moov', 'timestamp',
                                    'deployment', 'frame_count'])
 
 
@@ -257,10 +259,12 @@ def update_dbcamhd(dbcamhd):
             dbcamhd_new = get_dbcamhd_entry(blob)
         else:
             dbcamhd_new = pd.concat([dbcamhd_new, get_dbcamhd_entry(blob)])
+    if len(blob_list) > 0:
+        dbcamhd = pd.concat([dbcamhd, dbcamhd_new]).reset_index(drop=True)
 
-    return pd.concat([dbcamhd, dbcamhd_new]).reset_index(drop=True)
+    return dbcamhd
 
-def save_dbcamhd(dbcamhd):
+def save_dbcamhd(dbcamhd, sas_token=None):
     """
     Save the dbcamhd database.
 
@@ -268,19 +272,24 @@ def save_dbcamhd(dbcamhd):
     ----------
     dbcamhd: pandas.DataFrame
         Pandas DataFrame containing the dbcamhd database.
+    sas_token : str
+        SAS token required for authenticated access.
     """
+    storage_account_url = 'https://ooiopendata.blob.core.windows.net'
+    blob_service_client = BlobServiceClient(storage_account_url, credential=sas_token)
+
     dbcamhd.to_json('dbcamhd.json', orient="records", lines=True)
-    #blob_client = blob_service_client.get_blob_client(container = 'camhd', blob = 'dbcamhd.json')
+    #blob_client = blob_service_client.get_blob_client(container='camhd', blob='dbcamhd.json')
     #with open('dbcamhd.json', 'rb') as data:
-    #    blob_client.upload_blob(data, overwrite = True)
+    #    blob_client.upload_blob(data, overwrite=True)
 
     dbcamhd.to_csv('dbcamhd.csv')
-    #blob_client = blob_service_client.get_blob_client(container = 'camhd', blob = 'dbcamhd.csv')
+    #blob_client = blob_service_client.get_blob_client(container='camhd', blob='dbcamhd.csv')
     #with open('dbcamhd.csv', 'rb') as data:
-    #    blob_client.upload_blob(data, overwrite = True)
+    #    blob_client.upload_blob(data, overwrite=True)
+
 
 def main():
-
     # get SAS token from secrets file
     secrets_file = '/home/tjc/github/ooicloud/ooi-opendata/secrets/tjcrone.yml'
     with open(secrets_file, 'r') as stream:
@@ -288,15 +297,18 @@ def main():
     sas_token = keys['camhd']
 
     # get list of files to transfer
-    #raw_list = get_raw_list(days=0)
-    #ooiopendata_list = get_ooiopendata_list(container='camhd')
-    #transfer_list = get_transfer_list(raw_list, ooiopendata_list)
+    raw_list = get_raw_list(days=10)
+    ooiopendata_list = get_ooiopendata_list(container='camhd')
+    transfer_list = get_transfer_list(raw_list, ooiopendata_list)
 
     # testing
+    #for i in transfer_list:
+    #    print(i)
+    #print(len(transfer_list))
     #transfer_list = [transfer_list[0]]
 
     # transfer files
-    #transfer_files(transfer_list, sas_token, max_file_size=40)
+    transfer_files(transfer_list, sas_token, max_file_size=40)
 
     # open database file
     dbcamhd = read_dbcamhd()
@@ -305,7 +317,7 @@ def main():
     dbcamhd = update_dbcamhd(dbcamhd)
 
     # save dbcamhd
-    save_dbcamhd(dbcamhd)
+    save_dbcamhd(dbcamhd, sas_token=sas_token)
 
 
 if __name__ == '__main__':
