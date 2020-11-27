@@ -20,7 +20,8 @@ def get_raw_list(days=None):
     Parameters
     ----------
     days : int, optional
-        Number of days from today to look back in time.
+        Number of days from today to look back in time. All files will be returned if
+        no days argument is not passed.
 
     Returns
     -------
@@ -75,7 +76,7 @@ def get_ooiopendata_blobs(container=None, sas_token=None):
 
     Returns
     -------
-    list : BlobProperties
+    list : Azure BlobProperties class.
     """
     storage_account_url = 'https://ooiopendata.blob.core.windows.net'
     blob_service_client = BlobServiceClient(storage_account_url, credential = sas_token)
@@ -169,7 +170,7 @@ def get_deployment(timestamp):
     Parameters
     ----------
     timestamp : int
-        Unix epoch timestamp.
+        Unix epoch timestamp from camhd.get_timestamp().
 
     Returns
     -------
@@ -198,7 +199,7 @@ def get_dbcamhd_entry(blob):
 
     Parameters
     ----------
-    blob : azure blob
+    blob : Azure BlobProperties object.
         Blob corresponding to a CAMHD file in the ooiopendata storage account.
 
     Returns
@@ -235,25 +236,48 @@ def get_dbcamhd_entry(blob):
 def update_dbcamhd(dbcamhd):
     """
     Update the dbcamhd database.
-    """
 
+    Parameters
+    ----------
+    dbcamhd: pandas.DataFrame
+        Pandas DataFrame containing the dbcamhd database.
+    """
     # get list of blobs
     ooiopendata_blobs = get_ooiopendata_blobs(container='camhd')
 
     # filter blobs already in database
     blob_list = []
-    for blob in blob_iter:
+    for blob in ooiopendata_blobs:
         if blob.name not in dbcamhd['name'].values and blob.name.endswith('mov'):
             blob_list.append(blob)
 
+    # update dbcamhd
     for i, blob in enumerate(blob_list):
         if i == 0:
-            dbcamhd_new = get_entry(blob)
+            dbcamhd_new = get_dbcamhd_entry(blob)
         else:
-            dbcamhd_new = pd.concat([dbcamhd_new, get_entry(blob)])
+            dbcamhd_new = pd.concat([dbcamhd_new, get_dbcamhd_entry(blob)])
 
     return pd.concat([dbcamhd, dbcamhd_new]).reset_index(drop=True)
 
+def save_dbcamhd(dbcamhd):
+    """
+    Save the dbcamhd database.
+
+    Parameters
+    ----------
+    dbcamhd: pandas.DataFrame
+        Pandas DataFrame containing the dbcamhd database.
+    """
+    dbcamhd.to_json('dbcamhd.json', orient="records", lines=True)
+    #blob_client = blob_service_client.get_blob_client(container = 'camhd', blob = 'dbcamhd.json')
+    #with open('dbcamhd.json', 'rb') as data:
+    #    blob_client.upload_blob(data, overwrite = True)
+
+    dbcamhd.to_csv('dbcamhd.csv')
+    #blob_client = blob_service_client.get_blob_client(container = 'camhd', blob = 'dbcamhd.csv')
+    #with open('dbcamhd.csv', 'rb') as data:
+    #    blob_client.upload_blob(data, overwrite = True)
 
 def main():
 
@@ -264,35 +288,24 @@ def main():
     sas_token = keys['camhd']
 
     # get list of files to transfer
-    raw_list = get_raw_list(days=0)
-    ooiopendata_list = get_ooiopendata_list(container='camhd')
-    transfer_list = get_transfer_list(raw_list, ooiopendata_list)
+    #raw_list = get_raw_list(days=0)
+    #ooiopendata_list = get_ooiopendata_list(container='camhd')
+    #transfer_list = get_transfer_list(raw_list, ooiopendata_list)
 
     # testing
-    transfer_list = [transfer_list[0]]
+    #transfer_list = [transfer_list[0]]
 
     # transfer files
-    transfer_files(transfer_list, sas_token, max_file_size=40)
+    #transfer_files(transfer_list, sas_token, max_file_size=40)
 
     # open database file
-    #dbcamhd = read_dbcamhd()
+    dbcamhd = read_dbcamhd()
 
     # update dbcamhd
-    #dbcamhd = update_dbcamhd(dbcamhd)
+    dbcamhd = update_dbcamhd(dbcamhd)
 
     # save dbcamhd
-    #save_dbcamhd(dbcamhd)
-
-    # Save to Azure
-    #dbcamhd.to_json('dbcamhd.json', orient="records", lines=True)
-    #blob_client = blob_service_client.get_blob_client(container = 'camhd', blob = 'dbcamhd.json')
-    #with open('dbcamhd.json', 'rb') as data:
-    #    blob_client.upload_blob(data, overwrite = True)
-
-    #dbcamhd.to_csv('dbcamhd.csv')
-    #blob_client = blob_service_client.get_blob_client(container = 'camhd', blob = 'dbcamhd.csv')
-    #with open('dbcamhd.csv', 'rb') as data:
-    #    blob_client.upload_blob(data, overwrite = True)
+    save_dbcamhd(dbcamhd)
 
 
 if __name__ == '__main__':
