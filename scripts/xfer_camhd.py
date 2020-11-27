@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-# imports
 import numpy as np
 import pandas as pd
 import requests
@@ -20,8 +19,8 @@ def get_raw_list(days=None):
     Parameters
     ----------
     days : int, optional
-        Number of days from today to look back in time. All files will be returned if
-        no days argument is not passed.
+        Number of days from today to look back in time. All files will be
+        returned if no days argument is not passed.
 
     Returns
     -------
@@ -45,7 +44,7 @@ def get_raw_list(days=None):
 
 def get_ooiopendata_list(container=None, sas_token=None):
     """
-    Return a list of files from a container in the ooiopendata storage account.
+    Return a list of file names from a container in the ooiopendata storage account.
 
     Parameters
     ----------
@@ -128,7 +127,6 @@ def transfer_files(transfer_list, sas_token, max_file_size=None):
     max_file_size : int, optional
         Maximum file size to transfer.
     """
-
     container = 'https://ooiopendata.blob.core.windows.net/camhd?' + sas_token
 
     for i, url in enumerate(transfer_list):
@@ -259,9 +257,9 @@ def update_dbcamhd(dbcamhd):
             dbcamhd_new = get_dbcamhd_entry(blob)
         else:
             dbcamhd_new = pd.concat([dbcamhd_new, get_dbcamhd_entry(blob)])
+
     if len(blob_list) > 0:
         dbcamhd = pd.concat([dbcamhd, dbcamhd_new]).reset_index(drop=True)
-
     return dbcamhd
 
 def save_dbcamhd(dbcamhd, sas_token=None):
@@ -290,7 +288,7 @@ def save_dbcamhd(dbcamhd, sas_token=None):
 
 
 def main():
-    # get SAS token from secrets file
+    # load SAS token from secrets file
     secrets_file = '/home/tjc/github/ooicloud/ooi-opendata/secrets/tjcrone.yml'
     with open(secrets_file, 'r') as stream:
         keys = yaml.safe_load(stream)
@@ -300,12 +298,6 @@ def main():
     raw_list = get_raw_list(days=10)
     ooiopendata_list = get_ooiopendata_list(container='camhd')
     transfer_list = get_transfer_list(raw_list, ooiopendata_list)
-
-    # testing
-    #for i in transfer_list:
-    #    print(i)
-    #print(len(transfer_list))
-    #transfer_list = [transfer_list[0]]
 
     # transfer files
     transfer_files(transfer_list, sas_token, max_file_size=40)
