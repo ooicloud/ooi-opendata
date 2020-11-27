@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Imports
+# imports
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
@@ -10,13 +10,16 @@ import subprocess
 from datetime import datetime
 from datetime import timedelta
 
-# Constants
+# constants
 repodir = '/home/tjc/github/ooicloud/ooi-opendata/'
 
-# Get list of files on raw data server
+# output log message
+print('Log message ...')
+
+# get list of files on raw data server
 def get_raw_list():
     dates = []
-    for i in range(4): # scrape index files from three days ago to present
+    for i in range(30): # scrape index files from three days ago to present
        dates.append(datetime.now() - timedelta(days=i))
 
     ext = 'mov'
@@ -33,7 +36,7 @@ def get_raw_list():
 
 raw_list = get_raw_list()
 
-# Get list of files on Azure
+# get list of files on Azure
 with open(repodir + 'secrets/tjcrone.yml', 'r') as stream:
     keys = yaml.safe_load(stream)
 storage_account_url = 'https://ooiopendata.blob.core.windows.net'
@@ -42,7 +45,7 @@ container_client = blob_service_client.get_container_client('camhd')
 azure_list = [blob.name for blob in container_client.list_blobs()]
 
 
-# Filter list
+# filter list
 transfer_list = []
 for url in raw_list:
     filename = url.split('/')[-1].strip()
@@ -61,9 +64,9 @@ for i, url in enumerate(transfer_list):
     filename = url.split('/')[-1].strip()
     size = int(requests.get(url, stream=True).headers['Content-length'])/1024/1024/1024
     if size > 40:
-        print('Skipping %s (%f GB)' % (filename, size))
+        print('%s  Skipping %s (%f GB)' % (datetime.now(), filename, size))
     else:
-        print('Copying %s [%i/%i]' % (filename, i+1, len(transfer_list)))
+        print('%s  Copying %s [%i/%i]' % (datetime.now(), filename, i+1, len(transfer_list)))
         subprocess.check_output(['wget', '-q', '-O', '/mnt/opendata/%s' % filename, url])
         subprocess.check_output(['/usr/local/bin/azcopy', 'copy', '/mnt/opendata/%s' % filename, container + keys['camhd'], '--put-md5'])
         subprocess.check_output(['rm', '/mnt/opendata/%s' % filename])
