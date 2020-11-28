@@ -12,6 +12,14 @@ import pycamhd as camhd
 import fsspec
 
 
+import logging
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO,
+                    datefmt='%Y-%m-%d %H:%M:%S')
+
+#logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO
+
+
+
 def get_raw_list(days=None):
     """
     Return a list of files from the Raw Data Server.
@@ -97,7 +105,8 @@ def get_transfer_list(raw_list, ooiopendata_list):
 
     Returns
     -------
-    list : str
+    list : tuple
+        Returns a list of tuples with the files to transfer and their sizes.
     """
     storage_account_url = 'https://ooiopendata.blob.core.windows.net'
     blob_service_client = BlobServiceClient(storage_account_url)
@@ -109,9 +118,14 @@ def get_transfer_list(raw_list, ooiopendata_list):
             md5_hash = blob_client.get_blob_properties()['content_settings']['content_md5']
             if not md5_hash:
                 transfer_list.append(url)
-        if filename not in ooiopendata_list:
+        else:
             transfer_list.append(url)
-    return transfer_list
+
+    size_list = []
+    for url in transfer_list:
+        size_list.append(requests.get(url, stream=True).headers['Content-length'])
+
+    return [(transfer_list[i], size_list[i]) for i in range(len(transfer_list))]
 
 
 def transfer_files(transfer_list, sas_token, max_file_size=None):
@@ -129,20 +143,69 @@ def transfer_files(transfer_list, sas_token, max_file_size=None):
     """
     container = 'https://ooiopendata.blob.core.windows.net/camhd?' + sas_token
 
-    for i, url in enumerate(transfer_list):
+    for item in transfer_list:
+        url = item[0]
         filename = url.split('/')[-1].strip()
-        size = int(requests.get(url, stream=True).headers['Content-length'])/1024/1024/1024
+        file_size = int(item[1])/(1024**3)
 
         if max_file_size is not None:
-            if size > max_file_size:
-                print('%s  Skipping %s (%.1f GB)' % (datetime.datetime.now(), filename, size))
+            if file_size > max_file_size:
                 continue
 
-        print('%s  Transferring %s (%.1f GB)' % (datetime.datetime.now(), filename, size))
-        subprocess.check_output(['wget', '-q', '-O', '/mnt/opendata/%s' % filename, url])
-        subprocess.check_output(['/usr/local/bin/azcopy', 'copy',
-                                 '/mnt/opendata/%s' % filename, container, '--put-md5'])
-        subprocess.check_output(['rm', '/mnt/opendata/%s' % filename])
+        print('%s %s (%.1f GB)' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                                   filename, file_size))
+        #subprocess.check_output(['wget', '-q', '-O', '/mnt/opendata/%s' % filename, url])
+        #subprocess.check_output(['/usr/local/bin/azcopy', 'copy',
+        #                         '/mnt/opendata/%s' % filename, container, '--put-md5'])
+        #subprocess.check_output(['rm', '/mnt/opendata/%s' % filename])
+
+
+def show_transfer_stats(transfer_list, max_file_size=None):
+    """
+    Show file transfer stats.
+
+    Parameters
+    ----------
+    tranfer_list : list of str
+        List of files to transfer.
+    max_file_size : int, optional
+        Maximum file size to transfer.
+    """
+    skip_list = []
+    noskip_list = []
+    for item in transfer_list:
+        url = item[0]
+        filename = url.split('/')[-1].strip()
+        file_size = int(item[1])/(1024**3)
+
+        if max_file_size is not None:
+            if file_size > max_file_size:
+                skip_list.append(item)
+            else:
+                noskip_list.append(item)
+        else:
+            noskip_list.append(item)
+
+
+
+
+    for item in noskip_list:
+        print(item)
+
+    print('asdf')
+
+    for item in skip_list:
+        print(item)
+
+
+#number of files to transfer
+#total transfer size
+#number of files to skip
+
+#files skipped:
+
+
+
 
 
 # delete files on Azure for testing
@@ -209,7 +272,7 @@ def get_dbcamhd_entry(blob):
     """
     name = blob.name
     url = 'https://ooiopendata.blob.core.windows.net/camhd/' + blob.name
-    filesize = blob.size
+    file_size = blob.size
     md5_64 = blob['content_settings']['content_md5']
     if md5_64:
         md5 = blob['content_settings']['content_md5'].hex()
@@ -228,7 +291,7 @@ def get_dbcamhd_entry(blob):
         deployment = 0
         frame_count = 0
 
-    return pd.DataFrame([[name, url, filesize, md5, moov, timestamp, deployment, frame_count]],
+    return pd.DataFrame([[name, url, file_size, md5, moov, timestamp, deployment, frame_count]],
                         columns=['name', 'url', 'filesize', 'md5', 'moov', 'timestamp',
                                    'deployment', 'frame_count'])
 
@@ -294,22 +357,27 @@ def main():
         keys = yaml.safe_load(stream)
     sas_token = keys['camhd']
 
+    logging.info('So should this')
+
     # get list of files to transfer
-    raw_list = get_raw_list(days=10)
-    ooiopendata_list = get_ooiopendata_list(container='camhd')
-    transfer_list = get_transfer_list(raw_list, ooiopendata_list)
+    #raw_list = get_raw_list(days=30)
+    #raw_list = get_raw_list(days=0)
+    #ooiopendata_list = get_ooiopendata_list(container='camhd')
+    #transfer_list = get_transfer_list(raw_list, ooiopendata_list)
 
     # transfer files
-    transfer_files(transfer_list, sas_token, max_file_size=40)
+    #max_file_size = 40
+    #show_transfer_stats(transfer_list, max_file_size=max_file_size)
+    #transfer_files(transfer_list, sas_token, max_file_size=max_file_size)
 
     # open database file
-    dbcamhd = read_dbcamhd()
+    #dbcamhd = read_dbcamhd()
 
     # update dbcamhd
-    dbcamhd = update_dbcamhd(dbcamhd)
+    #dbcamhd = update_dbcamhd(dbcamhd)
 
     # save dbcamhd
-    save_dbcamhd(dbcamhd, sas_token=sas_token)
+    #save_dbcamhd(dbcamhd, sas_token=sas_token)
 
 
 if __name__ == '__main__':
