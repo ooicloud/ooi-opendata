@@ -12,14 +12,6 @@ import pycamhd as camhd
 import fsspec
 
 
-import logging
-logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO,
-                    datefmt='%Y-%m-%d %H:%M:%S')
-
-#logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO
-
-
-
 def get_raw_list(days=None):
     """
     Return a list of files from the Raw Data Server.
@@ -151,18 +143,16 @@ def transfer_files(transfer_list, sas_token, max_file_size=None):
         if max_file_size is not None:
             if file_size > max_file_size:
                 continue
-
-        print('%s %s (%.1f GB)' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                                   filename, file_size))
-        #subprocess.check_output(['wget', '-q', '-O', '/mnt/opendata/%s' % filename, url])
-        #subprocess.check_output(['/usr/local/bin/azcopy', 'copy',
-        #                         '/mnt/opendata/%s' % filename, container, '--put-md5'])
-        #subprocess.check_output(['rm', '/mnt/opendata/%s' % filename])
+        logmessage('Copy: %s (%.2f GB)' % (filename, file_size))
+        subprocess.check_output(['wget', '-q', '-O', '/mnt/opendata/%s' % filename, url])
+        subprocess.check_output(['/usr/local/bin/azcopy', 'copy',
+                                 '/mnt/opendata/%s' % filename, container, '--put-md5'])
+        subprocess.check_output(['rm', '/mnt/opendata/%s' % filename])
 
 
-def show_transfer_stats(transfer_list, max_file_size=None):
+def log_transfer_stats(transfer_list, max_file_size=None):
     """
-    Show file transfer stats.
+    Print file transfer stats.
 
     Parameters
     ----------
@@ -186,26 +176,13 @@ def show_transfer_stats(transfer_list, max_file_size=None):
         else:
             noskip_list.append(item)
 
-
-
-
-    for item in noskip_list:
-        print(item)
-
-    print('asdf')
-
+    total_size = sum([int(item[1]) for item in noskip_list])/(1024**3)
+    logmessage('Number of files to skip: %i' % len(skip_list))
     for item in skip_list:
-        print(item)
-
-
-#number of files to transfer
-#total transfer size
-#number of files to skip
-
-#files skipped:
-
-
-
+        url = item[0]
+        filename = url.split('/')[-1].strip()
+        logmessage('Skip: %s (%.2f GB)' % (filename, int(item[1])/(1024**3)))
+    logmessage('Number of files to transfer: %i (%.2f GB)' % (len(noskip_list), total_size))
 
 
 # delete files on Azure for testing
@@ -255,6 +232,7 @@ def get_deployment(timestamp):
         return 7
     else:
         return None
+
 
 def get_dbcamhd_entry(blob):
     """
@@ -325,6 +303,7 @@ def update_dbcamhd(dbcamhd):
         dbcamhd = pd.concat([dbcamhd, dbcamhd_new]).reset_index(drop=True)
     return dbcamhd
 
+
 def save_dbcamhd(dbcamhd, sas_token=None):
     """
     Save the dbcamhd database.
@@ -350,34 +329,42 @@ def save_dbcamhd(dbcamhd, sas_token=None):
         blob_client.upload_blob(data, overwrite=True)
 
 
+def logmessage(message):
+    name = __file__.split('/')[-1].split('.')[0]
+    print('%s [%s] %s' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, message))
+
+
 def main():
+
+    logmessage('Starting transfer of CAMHD files')
+
     # load SAS token from secrets file
     secrets_file = '/home/tjc/github/ooicloud/ooi-opendata/secrets/tjcrone.yml'
     with open(secrets_file, 'r') as stream:
         keys = yaml.safe_load(stream)
     sas_token = keys['camhd']
 
-    logging.info('So should this')
-
     # get list of files to transfer
-    #raw_list = get_raw_list(days=30)
-    #raw_list = get_raw_list(days=0)
-    #ooiopendata_list = get_ooiopendata_list(container='camhd')
-    #transfer_list = get_transfer_list(raw_list, ooiopendata_list)
+    raw_list = get_raw_list(days=3)
+    ooiopendata_list = get_ooiopendata_list(container='camhd')
+    transfer_list = get_transfer_list(raw_list, ooiopendata_list)
 
     # transfer files
-    #max_file_size = 40
-    #show_transfer_stats(transfer_list, max_file_size=max_file_size)
-    #transfer_files(transfer_list, sas_token, max_file_size=max_file_size)
+    max_file_size = 40
+    log_transfer_stats(transfer_list, max_file_size=max_file_size)
+    transfer_files(transfer_list, sas_token, max_file_size=max_file_size)
+    logmessage('Transfer complete')
 
     # open database file
-    #dbcamhd = read_dbcamhd()
+    logmessage('Updating database')
+    dbcamhd = read_dbcamhd()
 
     # update dbcamhd
-    #dbcamhd = update_dbcamhd(dbcamhd)
+    dbcamhd = update_dbcamhd(dbcamhd)
 
-    # save dbcamhd
-    #save_dbcamhd(dbcamhd, sas_token=sas_token)
+    # save dbcamhd to local and remote
+    save_dbcamhd(dbcamhd, sas_token=sas_token)
+    logmessage('Database update complete')
 
 
 if __name__ == '__main__':
