@@ -185,14 +185,6 @@ def log_transfer_stats(transfer_list, max_file_size=None):
     logmessage('Number of files to transfer: %i (%.2f GB)' % (len(noskip_list), total_size))
 
 
-# delete files on Azure for testing
-#for file_url in files_to_transfer:
-#    filename = file_url.split('/')[-1].strip()
-#    print('Deleting %s' % filename)
-#    blob_client = blob_service_client.get_blob_client(container='camhd', blob=filename)
-#    blob_client.delete_blob()
-
-
 def read_dbcamhd():
     """
     Open the current dbcamhd.json file.
