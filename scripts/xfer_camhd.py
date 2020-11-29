@@ -144,10 +144,10 @@ def transfer_files(transfer_list, sas_token, max_file_size=None):
             if file_size > max_file_size:
                 continue
         logmessage('Copy: %s (%.2f GB)' % (filename, file_size))
-        subprocess.check_output(['wget', '-q', '-O', '/mnt/opendata/%s' % filename, url])
+        subprocess.check_output(['wget', '-q', '-O', ('/mnt/opendata/%s' % filename), url])
         subprocess.check_output(['/usr/local/bin/azcopy', 'copy',
-                                 '/mnt/opendata/%s' % filename, container, '--put-md5'])
-        subprocess.check_output(['rm', '/mnt/opendata/%s' % filename])
+                                 ('/mnt/opendata/%s' % filename), container, '--put-md5'])
+        subprocess.check_output(['rm', ('/mnt/opendata/%s' % filename)])
 
 
 def log_transfer_stats(transfer_list, max_file_size=None):
