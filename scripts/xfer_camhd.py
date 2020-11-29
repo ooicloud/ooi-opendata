@@ -10,6 +10,7 @@ import subprocess
 import datetime
 import pycamhd as camhd
 import fsspec
+import fcntl
 
 
 def get_raw_list(days=None):
@@ -327,7 +328,16 @@ def logmessage(message):
 
 
 def main():
+    # check for lock
+    lock_file = '/home/tjc/github/ooicloud/ooi-opendata/scripts/xfer_camhd.lock'
+    lock = open(lock_file, 'w')
+    try:
+        fcntl.lockf(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except:
+        raise SystemExit
+    logmessage('Lock obtained')
 
+    # begin transfer
     logmessage('Starting transfer of CAMHD files')
 
     # load SAS token from secrets file
@@ -358,6 +368,9 @@ def main():
     save_dbcamhd(dbcamhd, sas_token=sas_token)
     logmessage('Database update complete')
 
+    # remove lock
+    lock.close()
+    subprocess.check_output(['rm', lock_file])
 
 if __name__ == '__main__':
     main()
