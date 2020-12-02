@@ -324,7 +324,8 @@ def save_dbcamhd(dbcamhd, sas_token=None):
 
 def logmessage(message):
     name = __file__.split('/')[-1].split('.')[0]
-    print('%s [%s] %s' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, message))
+    print('%s [%s] %s' % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), name, message),
+        flush=True)
 
 
 def main():
